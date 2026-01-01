@@ -1,3 +1,59 @@
 spring:
   application:
     name: library-api
+
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_SERVER:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:libraryapi}
+    username: ${POSTGRES_USER:admin}
+    password: ${POSTGRES_PASSWORD:aaAA1234}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 15
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+# Management Endpoints (Actuator)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+      base-path: /
+  endpoint:
+    health:
+      show-details: always
+
+# Server Configuration
+server:
+  port: ${PORT:8080}
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: never
+    include-exception: false
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.library.api: ${LOG_LEVEL:INFO}
+    org.springframework.web: INFO
+    org.hibernate: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    tags-sorter: alpha
+    operations-sorter: alpha
+    try-it-out-enabled: true
+    filter: true
+  show-actuator: false
