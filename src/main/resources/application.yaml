@@ -3,7 +3,7 @@ spring:
     name: library-api
 
   datasource:
-    url: jdbc:postgresql://${POSTGRES_SERVER:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:libraryapi}
+    url: jdbc:postgresql://${POSTGRES_SERVER:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:libraryapispringboot}
     username: ${POSTGRES_USER:admin}
     password: ${POSTGRES_PASSWORD:aaAA1234}
     driver-class-name: org.postgresql.Driver
@@ -14,25 +14,31 @@ spring:
       idle-timeout: 600000
       max-lifetime: 1800000
 
+  web:
+    error:
+      include-message: always
+      include-binding-errors: always
+      include-stacktrace: never
+      include-exception: false
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
 # Management Endpoints (Actuator)
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health
       base-path: /
   endpoint:
     health:
-      show-details: always
+      show-details: never
 
 # Server Configuration
 server:
-  port: ${PORT:8080}
-  error:
-    include-message: always
-    include-binding-errors: always
-    include-stacktrace: never
-    include-exception: false
+  port: ${PORT:8000}
 
 # Logging
 logging:
