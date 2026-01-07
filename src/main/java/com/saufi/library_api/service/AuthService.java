@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import com.saufi.library_api.domain.entity.User;
 import com.saufi.library_api.dto.request.LoginRequest;
 import com.saufi.library_api.dto.response.TokenResponse;
+import com.saufi.library_api.exception.CustomHttpException;
 import com.saufi.library_api.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -19,7 +20,7 @@ public class AuthService {
         String email = loginRequest.getEmail();
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found")); // TODO: Create custom exception
+                .orElseThrow(() -> CustomHttpException.notFound("User not found"));
 
         // TODO: validate password
         // TODO: generate access token
