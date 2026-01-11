@@ -37,4 +37,20 @@ public class AuthController {
                 return ResponseEntity.ok(tokenResponse);
         }
 
+        @Operation(summary = "Logout", description = "Revoke the current access token by adding it to the blacklist")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Logout successful", content = @Content),
+                        @ApiResponse(responseCode = "401", description = "Invalid or missing token", content = @Content)
+        })
+        @PostMapping("/logout")
+        public ResponseEntity<Void> logout(
+                        @org.springframework.web.bind.annotation.RequestHeader("Authorization") String authHeader) {
+                // Extract token from Bearer header
+                if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                        String token = authHeader.substring(7);
+                        authService.logout(token);
+                }
+                return ResponseEntity.ok().build();
+        }
+
 }

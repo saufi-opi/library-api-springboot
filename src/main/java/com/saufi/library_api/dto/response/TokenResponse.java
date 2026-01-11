@@ -15,4 +15,6 @@ public class TokenResponse {
 
     @Builder.Default
     private String tokenType = "bearer";
+
+    private Long expiresIn; // seconds until expiration
 }
