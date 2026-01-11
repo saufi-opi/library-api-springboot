@@ -22,5 +22,5 @@ public class BookRequest {
     private String author;
 
     @Builder.Default
-    private boolean isAvailable = true;
+    private boolean available = true;
 }
