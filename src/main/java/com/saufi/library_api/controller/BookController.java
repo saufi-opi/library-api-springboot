@@ -3,10 +3,12 @@ package com.saufi.library_api.controller;
 import com.saufi.library_api.domain.entity.Book;
 import com.saufi.library_api.dto.request.BookRequest;
 import com.saufi.library_api.dto.response.BookResponse;
+import com.saufi.library_api.dto.response.PaginatedResponse;
 import com.saufi.library_api.service.BookService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,10 +28,27 @@ public class BookController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('books:read')")
-    public ResponseEntity<List<BookResponse>> getAllBooks() {
-        return ResponseEntity.ok(bookService.getAllBooks().stream()
+    public ResponseEntity<PaginatedResponse<BookResponse>> getAllBooks(
+            @RequestParam(defaultValue = "0") Integer skip,
+            @RequestParam(defaultValue = "100") Integer limit,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String isbn,
+            @RequestParam(required = false) Boolean availableOnly,
+            @RequestParam(required = false) String sort) {
+        Page<Book> page = bookService.getAllBooks(skip, limit, search, isbn, availableOnly, sort);
+
+        List<BookResponse> bookResponses = page.getContent().stream()
                 .map(this::mapToResponse)
-                .collect(Collectors.toList()));
+                .collect(Collectors.toList());
+
+        PaginatedResponse<BookResponse> response = PaginatedResponse.<BookResponse>builder()
+                .data(bookResponses)
+                .total(page.getTotalElements())
+                .skip(skip != null ? skip : 0)
+                .limit(limit != null ? limit : 100)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
@@ -50,7 +69,7 @@ public class BookController {
         return new ResponseEntity<>(mapToResponse(bookService.createBook(book)), HttpStatus.CREATED);
     }
 
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     @PreAuthorize("hasAuthority('books:update')")
     public ResponseEntity<BookResponse> updateBook(@PathVariable UUID id, @Valid @RequestBody BookRequest request) {
         Book book = Book.builder()

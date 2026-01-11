@@ -36,7 +36,7 @@ class BookControllerIT extends BaseIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request)))
                                 .andExpect(status().isCreated())
-                                .andExpect(jsonPath("$.isbn").value("978-0134685991"))
+                                .andExpect(jsonPath("$.isbn").value("9780134685991"))
                                 .andExpect(jsonPath("$.title").value("The Pragmatic Programmer"));
         }
 
@@ -64,6 +64,47 @@ class BookControllerIT extends BaseIntegrationTest {
                 mockMvc.perform(get("/api/v1/books")
                                 .header("Authorization", "Bearer " + token))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$").isArray());
+                                .andExpect(jsonPath("$.data").isArray())
+                                .andExpect(jsonPath("$.total").isNumber())
+                                .andExpect(jsonPath("$.skip").value(0))
+                                .andExpect(jsonPath("$.limit").value(100));
+        }
+
+        @Test
+        void testListBooksWithPagination() throws Exception {
+                String token = testSecurityUtils.generateToken("member@example.com", RoleEnum.MEMBER);
+
+                mockMvc.perform(get("/api/v1/books")
+                                .param("skip", "0")
+                                .param("limit", "10")
+                                .header("Authorization", "Bearer " + token))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data").isArray())
+                                .andExpect(jsonPath("$.total").isNumber())
+                                .andExpect(jsonPath("$.skip").value(0))
+                                .andExpect(jsonPath("$.limit").value(10));
+        }
+
+        @Test
+        void testListBooksWithSearch() throws Exception {
+                String token = testSecurityUtils.generateToken("member@example.com", RoleEnum.MEMBER);
+
+                mockMvc.perform(get("/api/v1/books")
+                                .param("search", "Pragmatic")
+                                .header("Authorization", "Bearer " + token))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data").isArray())
+                                .andExpect(jsonPath("$.total").isNumber());
+        }
+
+        @Test
+        void testListBooksWithAvailableOnlyFilter() throws Exception {
+                String token = testSecurityUtils.generateToken("member@example.com", RoleEnum.MEMBER);
+
+                mockMvc.perform(get("/api/v1/books")
+                                .param("availableOnly", "true")
+                                .header("Authorization", "Bearer " + token))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data").isArray());
         }
 }

@@ -1,10 +1,14 @@
 package com.saufi.library_api.controller;
 
 import com.saufi.library_api.domain.entity.BorrowRecord;
+import com.saufi.library_api.dto.request.BorrowRequest;
 import com.saufi.library_api.dto.response.BorrowResponse;
+import com.saufi.library_api.dto.response.PaginatedResponse;
 import com.saufi.library_api.service.BorrowService;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,12 +28,13 @@ public class BorrowController {
 
     private final BorrowService borrowService;
 
-    @PostMapping("/book/{bookId}")
+    @PostMapping
     @PreAuthorize("hasAuthority('borrows:create')")
     public ResponseEntity<BorrowResponse> borrowBook(
-            @PathVariable UUID bookId,
+            @Valid @RequestBody BorrowRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
-        return new ResponseEntity<>(mapToResponse(borrowService.borrowBook(bookId, userDetails.getUsername())),
+        return new ResponseEntity<>(
+                mapToResponse(borrowService.borrowBook(request.getBookId(), userDetails.getUsername())),
                 HttpStatus.CREATED);
     }
 
@@ -43,28 +48,61 @@ public class BorrowController {
 
     @GetMapping("/me")
     @PreAuthorize("hasAuthority('borrows:read')")
-    public ResponseEntity<List<BorrowResponse>> getMyBorrows(
-            @RequestParam(defaultValue = "false") boolean activeOnly,
+    public ResponseEntity<PaginatedResponse<BorrowResponse>> getMyBorrows(
+            @RequestParam(defaultValue = "0") Integer skip,
+            @RequestParam(defaultValue = "100") Integer limit,
+            @RequestParam(required = false) Boolean activeOnly,
+            @RequestParam(required = false) UUID bookId,
+            @RequestParam(required = false) String sort,
             @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(borrowService.getUserBorrowRecords(userDetails.getUsername(), activeOnly).stream()
+        Page<BorrowRecord> page = borrowService.getUserBorrowRecordsPaginated(
+                userDetails.getUsername(), skip, limit, activeOnly, bookId, sort);
+
+        List<BorrowResponse> borrowResponses = page.getContent().stream()
                 .map(this::mapToResponse)
-                .collect(Collectors.toList()));
+                .collect(Collectors.toList());
+
+        PaginatedResponse<BorrowResponse> response = PaginatedResponse.<BorrowResponse>builder()
+                .data(borrowResponses)
+                .total(page.getTotalElements())
+                .skip(skip != null ? skip : 0)
+                .limit(limit != null ? limit : 100)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping
     @PreAuthorize("hasAuthority('borrows:read_all')")
-    public ResponseEntity<List<BorrowResponse>> getAllBorrows() {
-        return ResponseEntity.ok(borrowService.getAllBorrowRecords().stream()
+    public ResponseEntity<PaginatedResponse<BorrowResponse>> getAllBorrows(
+            @RequestParam(defaultValue = "0") Integer skip,
+            @RequestParam(defaultValue = "100") Integer limit,
+            @RequestParam(required = false) Boolean activeOnly,
+            @RequestParam(required = false) UUID bookId,
+            @RequestParam(required = false) UUID borrowerId,
+            @RequestParam(required = false) String sort) {
+        Page<BorrowRecord> page = borrowService.getAllBorrowRecordsPaginated(
+                skip, limit, activeOnly, bookId, borrowerId, sort);
+
+        List<BorrowResponse> borrowResponses = page.getContent().stream()
                 .map(this::mapToResponse)
-                .collect(Collectors.toList()));
+                .collect(Collectors.toList());
+
+        PaginatedResponse<BorrowResponse> response = PaginatedResponse.<BorrowResponse>builder()
+                .data(borrowResponses)
+                .total(page.getTotalElements())
+                .skip(skip != null ? skip : 0)
+                .limit(limit != null ? limit : 100)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     private BorrowResponse mapToResponse(BorrowRecord record) {
         return BorrowResponse.builder()
                 .id(record.getId())
                 .bookId(record.getBook().getId())
-                .bookTitle(record.getBook().getTitle())
-                .borrowerEmail(record.getBorrower().getEmail())
+                .borrowerId(record.getBorrower().getId())
                 .borrowedAt(record.getBorrowedAt())
                 .returnedAt(record.getReturnedAt())
                 .build();

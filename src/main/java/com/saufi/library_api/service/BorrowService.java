@@ -7,6 +7,11 @@ import com.saufi.library_api.repository.BookRepository;
 import com.saufi.library_api.repository.BorrowRecordRepository;
 import com.saufi.library_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -87,7 +92,70 @@ public class BorrowService {
     }
 
     @Transactional(readOnly = true)
+    public Page<BorrowRecord> getUserBorrowRecordsPaginated(String userEmail, Integer skip, Integer limit,
+            Boolean activeOnly, UUID bookId, String sort) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        Specification<BorrowRecord> spec = (root, query, cb) -> cb.equal(root.get("borrower"), user);
+
+        if (activeOnly != null && activeOnly) {
+            spec = spec.and((root, query, cb) -> cb.isNull(root.get("returnedAt")));
+        }
+
+        if (bookId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("book").get("id"), bookId));
+        }
+
+        Sort sortObj = Sort.unsorted();
+        if (sort != null && !sort.isBlank()) {
+            boolean descending = sort.startsWith("-");
+            String field = descending ? sort.substring(1) : sort;
+            sortObj = Sort.by(descending ? Sort.Direction.DESC : Sort.Direction.ASC, field);
+        }
+
+        int pageSize = (limit != null && limit > 0 && limit <= 1000) ? limit : 100;
+        int pageNumber = (skip != null && skip >= 0) ? (skip / pageSize) : 0;
+
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, sortObj);
+
+        return borrowRecordRepository.findAll(spec, pageable);
+    }
+
+    @Transactional(readOnly = true)
     public List<BorrowRecord> getAllBorrowRecords() {
         return borrowRecordRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<BorrowRecord> getAllBorrowRecordsPaginated(Integer skip, Integer limit, Boolean activeOnly,
+            UUID bookId, UUID borrowerId, String sort) {
+        Specification<BorrowRecord> spec = (root, query, cb) -> cb.conjunction();
+
+        if (activeOnly != null && activeOnly) {
+            spec = spec.and((root, query, cb) -> cb.isNull(root.get("returnedAt")));
+        }
+
+        if (bookId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("book").get("id"), bookId));
+        }
+
+        if (borrowerId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("borrower").get("id"), borrowerId));
+        }
+
+        Sort sortObj = Sort.unsorted();
+        if (sort != null && !sort.isBlank()) {
+            boolean descending = sort.startsWith("-");
+            String field = descending ? sort.substring(1) : sort;
+            sortObj = Sort.by(descending ? Sort.Direction.DESC : Sort.Direction.ASC, field);
+        }
+
+        int pageSize = (limit != null && limit > 0 && limit <= 1000) ? limit : 100;
+        int pageNumber = (skip != null && skip >= 0) ? (skip / pageSize) : 0;
+
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, sortObj);
+
+        return borrowRecordRepository.findAll(spec, pageable);
     }
 }

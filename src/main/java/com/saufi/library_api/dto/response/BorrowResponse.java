@@ -15,8 +15,7 @@ import java.util.UUID;
 public class BorrowResponse {
     private UUID id;
     private UUID bookId;
-    private String bookTitle;
-    private String borrowerEmail;
+    private UUID borrowerId;
     private LocalDateTime borrowedAt;
     private LocalDateTime returnedAt;
 }
