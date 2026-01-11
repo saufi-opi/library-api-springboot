@@ -1,10 +1,12 @@
 package com.saufi.library_api.config;
 
+import com.saufi.library_api.domain.entity.Book;
 import com.saufi.library_api.domain.entity.Permission;
 import com.saufi.library_api.domain.entity.Role;
 import com.saufi.library_api.domain.entity.User;
 import com.saufi.library_api.domain.enums.PermissionEnum;
 import com.saufi.library_api.domain.enums.RoleEnum;
+import com.saufi.library_api.repository.BookRepository;
 import com.saufi.library_api.repository.PermissionRepository;
 import com.saufi.library_api.repository.RoleRepository;
 import com.saufi.library_api.repository.UserRepository;
@@ -30,6 +32,7 @@ public class DataInitializer implements ApplicationRunner {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
+    private final BookRepository bookRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -38,6 +41,7 @@ public class DataInitializer implements ApplicationRunner {
         seedPermissions();
         seedRoles();
         seedUsers();
+        seedBooks();
     }
 
     private void seedPermissions() {
@@ -75,12 +79,43 @@ public class DataInitializer implements ApplicationRunner {
     private void seedUsers() {
         log.info("Seeding users...");
 
-        createTestUser("admin@example.com", "System Admin", "aaAA1234", RoleEnum.ADMIN);
-        createTestUser("librarian@example.com", "System Librarian", "aaAA1234", RoleEnum.LIBRARIAN);
-        createTestUser("member@example.com", "Regular Member", "aaAA1234", RoleEnum.MEMBER);
+        createUser("admin@example.com", "System Admin", "aaAA1234", RoleEnum.ADMIN);
+        createUser("librarian@example.com", "System Librarian", "aaAA1234", RoleEnum.LIBRARIAN);
+        createUser("member@example.com", "Regular Member", "aaAA1234", RoleEnum.MEMBER);
     }
 
-    private void createTestUser(String email, String fullName, String password, RoleEnum roleEnum) {
+    private void seedBooks() {
+        log.info("Seeding books...");
+
+        createBookCopy("978-0743273565", "The Great Gatsby", "F. Scott Fitzgerald");
+        createBookCopy("978-0743273565", "The Great Gatsby", "F. Scott Fitzgerald");
+        createBookCopy("978-0451524935", "1984", "George Orwell");
+        createBookCopy("978-0132350884", "Clean Code", "Robert C. Martin");
+    }
+
+    private void createBookCopy(String isbn, String title, String author) {
+        // Since id is UUID, we can't easily check for exact copy existence without
+        // business logic
+        // But for seeding, we can check if a copy with this title and author exists to
+        // avoid duplicates on restart
+        // if the database is persistent.
+        long existingCount = bookRepository.findByIsbn(isbn).size();
+
+        // This is a simple heuristic for seeding: if we expect 2 and have 2, skip.
+        // For more robust seeding, we might need a custom 'seed_id' or similar.
+        // Here we just add if not present at all for simplicity in this demo.
+        if (existingCount == 0) {
+            Book book = Book.builder()
+                    .isbn(isbn)
+                    .title(title)
+                    .author(author)
+                    .isAvailable(true)
+                    .build();
+            bookRepository.save(book);
+        }
+    }
+
+    private void createUser(String email, String fullName, String password, RoleEnum roleEnum) {
         if (userRepository.findByEmail(email).isPresent()) {
             log.info("User already exists: {}", email);
             return;
