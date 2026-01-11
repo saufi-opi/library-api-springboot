@@ -25,7 +25,7 @@ cp .env.example .env
 # Edit .env with your settings
 # At minimum, change these:
 # - POSTGRES_PASSWORD (Database password)
-# - JWT_SECRET (JWT signing secret, min 32 chars)
+# - JWT_SECRET_KEY (JWT signing secret, 256-bit / 64 hex chars)
 # - ADMIN_PASSWORD (Initial admin user password)
 # - LIBRARIAN_PASSWORD (Initial librarian user password)
 # - MEMBER_PASSWORD (Initial member user password)
@@ -42,6 +42,9 @@ cp .env.example .env
 | `POSTGRES_PASSWORD` | Database password | Yes | `your_secure_password_here` |
 | `JWT_SECRET_KEY` | JWT signing key (256-bit HEX) | Yes | See `.env.example` |
 | `JWT_EXPIRATION` | Token expiration (milliseconds) | No | `3600000` (1 hour) |
+| `JWT_ISSUER` | JWT token issuer | No | `library-api` |
+| `JWT_AUDIENCE` | JWT token audience | No | `library-api-client` |
+| `DDL_AUTO` | Hibernate DDL mode | No | `update` (dev), `validate` (prod) |
 | `ADMIN_EMAIL` | Admin user email | Yes | `admin@library.com` |
 | `ADMIN_PASSWORD` | Admin user password | Yes | `YourSecurePassword123!` |
 | `ADMIN_FULLNAME` | Admin user full name | No | `System Administrator` |
@@ -88,11 +91,11 @@ Once the application starts successfully, you can access:
 
 The application automatically:
 1. Waits for database to be healthy (via `depends_on` with health check)
-2. Runs Hibernate schema updates (`ddl-auto: update`)
+2. Runs Hibernate schema updates (controlled by `DDL_AUTO` env var, default: `update`)
 3. Seeds initial data via `DataInitializer` (permissions, roles, users, sample books)
 4. Starts on port 8080 internally (exposed to host)
 
-**Health check endpoint**: `http://localhost:8080/actuator/health`
+**Health check endpoint**: `http://localhost:8080/health` (base-path configured as `/`)
 
 **Features**:
 - JWT authentication with JJWT 0.12.3
@@ -159,17 +162,25 @@ docker-compose down -v
 
 ### Development Mode
 
-The application uses Hibernate with `ddl-auto: update`, which automatically:
+The application uses Hibernate with `ddl-auto` mode controlled by `DDL_AUTO` environment variable (default: `update`):
 - Creates tables on first run based on JPA entity annotations
 - Updates schema when entities change (adds new columns, tables)
 - Does **NOT** drop existing data (safe for development)
 - Runs `DataInitializer` to seed permissions, roles, users, and sample books
 
+**Configurable via Environment Variable:**
+```bash
+# In .env file
+DDL_AUTO=update  # Development: auto-update schema
+# or
+DDL_AUTO=validate  # Production: only validate, don't modify
+```
+
 ### Production Mode (Recommended)
 
 **Switch to Flyway for production:**
 
-1. Set `spring.jpa.hibernate.ddl-auto: validate` in production profile
+1. Set `DDL_AUTO=validate` in production `.env` file
 2. Create migration scripts in `src/main/resources/db/migration/`
 3. Name format: `V1__Initial_schema.sql`, `V2__Add_indexes.sql`
 4. Flyway will automatically run migrations on startup
@@ -230,7 +241,7 @@ docker-compose exec app ping db
 1. **Check application is healthy**:
    ```bash
    docker-compose ps app
-   curl http://localhost:8080/actuator/health
+   curl http://localhost:8080/health
    ```
    Should return: `{"status":"UP"}`
 
@@ -244,21 +255,21 @@ docker-compose exec app ping db
    ```bash
    docker-compose ps
    ```
-   Should show: `0.0.0.0:8080->8000/tcp`
+   Should show: `0.0.0.0:8080->8080/tcp`
 
 ### Healthcheck failures
 
 If you see continuous healthcheck errors:
 
 1. **Check actuator endpoint path**:
-   - Endpoint should be: `http://localhost:8080/actuator/health`
-   - Verify `management.endpoints.web.base-path=/actuator` in `application.yaml`
+   - Endpoint should be: `http://localhost:8080/health`
+   - Current config: `management.endpoints.web.base-path: /` (root path)
    - Verify actuator dependency is included in `pom.xml`
 
 2. **Check internal port**:
-   - Application runs on port 8080 internally (not 8000)
+   - Application runs on port 8080 internally
    - Docker exposes port 8080 to host
-   - Healthcheck targets `http://app:8080/actuator/health` inside Docker network
+   - Healthcheck targets `http://localhost:8080/health` inside container
 
 3. **Check Spring Boot startup time**:
    - Spring Boot can take 30-60 seconds to start (especially first time)
@@ -314,30 +325,50 @@ For production deployment, follow these additional steps:
 Update `.env` with strong, unique values:
 
 ```bash
-# Strong database password (20+ characters)
+# Database Configuration
+POSTGRES_SERVER=your-db-host  # Or 'db' for Docker Compose
+POSTGRES_PORT=5432
+POSTGRES_DB=library_db
+POSTGRES_USER=postgres
 POSTGRES_PASSWORD=<generate-strong-password-min-20-chars>
 
-# Strong JWT secret (256-bit / 64 hex characters for HS256)
-JWT_SECRET_KEY=<generate-256-bit-hex-key>
-# Example generation: openssl rand -hex 32
-
-# JWT expiration (milliseconds) - 1 hour = 3600000
-JWT_EXPIRATION=3600000
-
-# Strong user passwords (must meet validation: 8+ chars, upper, lower, digit, special)
-ADMIN_PASSWORD=<strong-password-meeting-requirements>
-LIBRARIAN_PASSWORD=<strong-password-meeting-requirements>
-MEMBER_PASSWORD=<strong-password-meeting-requirements>
-
-# Set to production profile (optional, default is good)
+# Application Configuration
+PORT=8080
 SPRING_PROFILES_ACTIVE=prod
+DDL_AUTO=validate  # ⚠️ IMPORTANT: Use 'validate' for production with Flyway
 
-# Use validate instead of update for production (after Flyway migrations)
-DDL_AUTO=validate
+# JWT Configuration (256-bit / 64 hex characters)
+JWT_SECRET_KEY=<generate-256-bit-hex-key>
+# Generate new secret: openssl rand -hex 32
+JWT_EXPIRATION=3600000  # 1 hour in milliseconds
+JWT_ISSUER=library-api
+JWT_AUDIENCE=library-api-client
 
-# CORS (comma-separated allowed origins)
+# CORS Configuration (comma-separated allowed origins)
 CORS_ALLOWED_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
+
+# Initial Admin User (for seeding)
+ADMIN_EMAIL=admin@yourdomain.com
+ADMIN_PASSWORD=<strong-password-meeting-requirements>
+ADMIN_FULLNAME=System Administrator
+
+# Librarian User (for seeding)
+LIBRARIAN_EMAIL=librarian@yourdomain.com
+LIBRARIAN_PASSWORD=<strong-password-meeting-requirements>
+LIBRARIAN_FULLNAME=Head Librarian
+
+# Member User (for seeding)
+MEMBER_EMAIL=member@yourdomain.com
+MEMBER_PASSWORD=<strong-password-meeting-requirements>
+MEMBER_FULLNAME=Library Member
 ```
+
+**Password Requirements** (must meet all):
+- Minimum 8 characters
+- At least one uppercase letter
+- At least one lowercase letter
+- At least one digit
+- At least one special character
 
 ### 2. Database Best Practices
 
@@ -374,7 +405,7 @@ CORS_ALLOWED_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
 1. **Health monitoring**:
    ```bash
    # Set up health check monitoring
-   */5 * * * * curl -f http://localhost:8080/actuator/health || alert-team
+   */5 * * * * curl -f http://localhost:8080/health || alert-team
    ```
 
 2. **Log aggregation**:
@@ -416,7 +447,7 @@ See the complete list of environment variables in the [Environment Configuration
 docker-compose ps
 
 # Application health endpoint
-curl http://localhost:8080/actuator/health
+curl http://localhost:8080/health
 
 # Database
 docker-compose exec db pg_isready -U postgres
@@ -453,6 +484,12 @@ docker-compose logs app --since 30m
 - **External port**: 8080 (exposed to host machine)
 - **Access**: http://localhost:8080
 - **Docker network**: Containers communicate via service names (e.g., `app` talks to `db:5432`)
+
+### Health Check Endpoints
+
+- **Actuator Health**: http://localhost:8080/health (configured with `base-path: /`)
+- **Swagger UI**: http://localhost:8080/swagger-ui.html
+- **OpenAPI JSON**: http://localhost:8080/v3/api-docs
 
 ### Data Persistence
 
