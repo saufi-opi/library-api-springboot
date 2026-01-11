@@ -287,9 +287,105 @@ curl -X POST "http://localhost:8080/api/v1/auth/logout" \
 
 ---
 
+## User Management
+
+### 3. Register a New Borrower
+
+Register a new user account with MEMBER role. Only accessible by ADMIN and LIBRARIAN.
+
+**Endpoint:** `POST /users/`
+
+**Authentication:** Required
+
+**Permission:** `users:create` (Admin and Librarian roles)
+
+**Request Body (JSON):**
+```json
+{
+  "email": "newuser@example.com",
+  "password": "SecurePass123!",
+  "fullName": "John Doe"
+}
+```
+
+**Field Requirements:**
+- `email` (required): Valid email format (validated with `@Email` and `@NotBlank`)
+- `password` (required): Must meet password complexity requirements (validated with `@ValidPassword`)
+  - Minimum 8 characters
+  - At least one uppercase letter
+  - At least one lowercase letter
+  - At least one digit
+  - At least one special character
+- `fullName` (optional): Full name of the user
+
+**Business Rules:**
+- Email must be unique (not already registered)
+- New users are automatically assigned the MEMBER role
+- Only ADMIN and LIBRARIAN can create new users
+- Password is hashed with BCrypt before storing
+
+**cURL Example:**
+```bash
+curl -X POST "http://localhost:8080/api/v1/users/" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "newuser@example.com",
+    "password": "SecurePass123!",
+    "fullName": "John Doe"
+  }'
+```
+
+**Success Response (201 Created):**
+```json
+{
+  "id": "789e0123-e89b-12d3-a456-426614176666",
+  "email": "newuser@example.com",
+  "fullName": "John Doe",
+  "roles": ["MEMBER"],
+  "createdAt": "2024-12-10T10:00:00Z"
+}
+```
+
+**Note:** Password is never returned in responses for security.
+
+**Error Responses:**
+
+- **403 Forbidden** - Insufficient permissions:
+```json
+{
+  "timestamp": "2026-01-11T12:00:00Z",
+  "status": 403,
+  "error": "Forbidden",
+  "message": "Access Denied"
+}
+```
+
+- **409 Conflict** - Email already registered:
+```json
+{
+  "timestamp": "2026-01-11T12:00:00Z",
+  "status": 409,
+  "error": "Conflict",
+  "message": "Email already registered"
+}
+```
+
+- **400 Bad Request** - Validation errors:
+```json
+{
+  "timestamp": "2026-01-11T12:00:00Z",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Password does not meet security requirements"
+}
+```
+
+---
+
 ## Book Management
 
-### 3. Register a New Book
+### 4. Register a New Book
 
 Add a new book to the library. Creates a new book record even if the ISBN already exists (allows multiple copies).
 
@@ -386,7 +482,7 @@ curl -X POST "http://localhost:8080/api/v1/books/" \
 
 ---
 
-### 4. List All Books
+### 5. List All Books
 
 Get a paginated list of all books in the library with optional filters.
 
@@ -464,7 +560,7 @@ curl -X GET "http://localhost:8080/api/v1/books/?isbn=9780134685991" \
 
 ---
 
-### 5. Get Book by ID
+### 6. Get Book by ID
 
 Get details of a specific book.
 
@@ -509,7 +605,7 @@ curl -X GET "http://localhost:8080/api/v1/books/123e4567-e89b-12d3-a456-42661417
 
 ---
 
-### 6. Update Book
+### 7. Update Book
 
 Update book details (ISBN, title, or author).
 
@@ -560,7 +656,7 @@ curl -X PATCH "http://localhost:8080/api/v1/books/123e4567-e89b-12d3-a456-426614
 
 ---
 
-### 7. Delete Book
+### 8. Delete Book
 
 Remove a book from the library.
 
@@ -592,7 +688,7 @@ curl -X DELETE "http://localhost:8080/api/v1/books/123e4567-e89b-12d3-a456-42661
 
 ## Borrow Management
 
-### 8. Borrow a Book
+### 9. Borrow a Book
 
 Borrow an available book on behalf of the current user.
 
@@ -660,7 +756,7 @@ curl -X POST "http://localhost:8080/api/v1/borrows/" \
 
 ---
 
-### 9. Return a Borrowed Book
+### 10. Return a Borrowed Book
 
 Return a book that was previously borrowed.
 
@@ -729,7 +825,7 @@ curl -X POST "http://localhost:8080/api/v1/borrows/987e6543-e89b-12d3-a456-42661
 
 ---
 
-### 10. List My Borrow Records
+### 11. List My Borrow Records
 
 Get a list of borrow records for the current user.
 
@@ -783,7 +879,7 @@ curl -X GET "http://localhost:8080/api/v1/borrows/me?activeOnly=true" \
 
 ---
 
-### 11. List All Borrow Records (Librarian)
+### 12. List All Borrow Records (Librarian)
 
 Get a list of all borrow records in the system (librarian only).
 
@@ -868,7 +964,7 @@ curl -X POST "http://localhost:8080/api/v1/auth/logout" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### Journey 2: Librarian Manages Books
+### Journey 2: Librarian Registers New Borrower and Manages Books
 
 ```bash
 # Step 1: Login as librarian
@@ -879,7 +975,17 @@ TOKEN=$(curl -X POST "http://localhost:8080/api/v1/auth/access-token" \
     "password": "your_librarian_password"
   }' | jq -r '.accessToken')
 
-# Step 2: Register a new book
+# Step 2: Register a new borrower (member)
+curl -X POST "http://localhost:8080/api/v1/users/" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "newmember@example.com",
+    "password": "SecurePass123!",
+    "fullName": "Jane Smith"
+  }'
+
+# Step 3: Register a new book
 BOOK_ID=$(curl -X POST "http://localhost:8080/api/v1/books/" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -889,7 +995,7 @@ BOOK_ID=$(curl -X POST "http://localhost:8080/api/v1/books/" \
     "author": "David Thomas, Andrew Hunt"
   }' | jq -r '.id')
 
-# Step 3: Register another copy of the same book
+# Step 4: Register another copy of the same book
 curl -X POST "http://localhost:8080/api/v1/books/" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -899,15 +1005,15 @@ curl -X POST "http://localhost:8080/api/v1/books/" \
     "author": "David Thomas, Andrew Hunt"
   }'
 
-# Step 4: View all books with this ISBN
+# Step 5: View all books with this ISBN
 curl -X GET "http://localhost:8080/api/v1/books/?isbn=9780134685991" \
   -H "Authorization: Bearer $TOKEN"
 
-# Step 5: View all active borrows in the system
+# Step 6: View all active borrows in the system
 curl -X GET "http://localhost:8080/api/v1/borrows/?activeOnly=true" \
   -H "Authorization: Bearer $TOKEN"
 
-# Step 6: Update book details
+# Step 7: Update book details
 curl -X PATCH "http://localhost:8080/api/v1/books/$BOOK_ID" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \

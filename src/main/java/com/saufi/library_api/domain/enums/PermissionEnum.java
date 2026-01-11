@@ -21,6 +21,7 @@ public enum PermissionEnum {
     BORROWS_READ_ALL("borrows:read_all", "View all borrow records"),
 
     // Users permissions
+    USERS_CREATE("users:create", "Create users"),
     USERS_READ("users:read", "Read users"),
     USERS_MANAGE("users:manage", "Manage users");
 
@@ -37,6 +38,7 @@ public enum PermissionEnum {
                     BOOKS_DELETE,
                     BORROWS_READ,
                     BORROWS_READ_ALL,
+                    USERS_CREATE,
                     USERS_READ);
             case MEMBER -> Set.of(
                     BOOKS_READ,
