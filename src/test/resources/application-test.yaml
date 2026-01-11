@@ -1,0 +1,71 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/libraryapispringboot
+    username: admin
+    password: aaAA1234
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  flyway:
+    enabled: true
+    clean-disabled: false
+    baseline-on-migrate: true
+
+# Application Security Configuration for Tests
+application:
+  security:
+    jwt:
+      secret-key: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      expiration: 3600000
+      issuer: library-api
+      audience: library-api-client
+
+    cors:
+      allowed-origins: http://localhost:3000
+      allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+      allowed-headers: "*"
+      allow-credentials: true
+      max-age: 3600
+
+    rate-limit:
+      auth-endpoints:
+        capacity: 1000
+        refill-tokens: 1000
+        refill-duration-minutes: 1
+      general-endpoints:
+        capacity: 1000
+        refill-tokens: 1000
+        refill-duration-minutes: 1
+
+    password:
+      min-length: 8
+      require-uppercase: true
+      require-lowercase: true
+      require-digit: true
+      require-special-char: true
+
+    brute-force:
+      max-attempts: 100
+      lockout-duration-minutes: 15
+
+    headers:
+      csp: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'"
+      hsts-max-age: 31536000
+      hsts-include-subdomains: true
+
+# Logging
+logging:
+  level:
+    root: WARN
+    com.saufi.library_api: INFO
+    org.springframework.web: WARN
+    org.hibernate: WARN
