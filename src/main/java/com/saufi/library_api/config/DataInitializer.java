@@ -13,6 +13,7 @@ import com.saufi.library_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -34,6 +35,33 @@ public class DataInitializer implements ApplicationRunner {
     private final PermissionRepository permissionRepository;
     private final BookRepository bookRepository;
     private final PasswordEncoder passwordEncoder;
+
+    @Value("${ADMIN_EMAIL:admin@example.com}")
+    private String adminEmail;
+
+    @Value("${ADMIN_PASSWORD:aaAA1234}")
+    private String adminPassword;
+
+    @Value("${ADMIN_FULLNAME:System Admin}")
+    private String adminFullname;
+
+    @Value("${LIBRARIAN_EMAIL:librarian@example.com}")
+    private String librarianEmail;
+
+    @Value("${LIBRARIAN_PASSWORD:aaAA1234}")
+    private String librarianPassword;
+
+    @Value("${LIBRARIAN_FULLNAME:System Librarian}")
+    private String librarianFullname;
+
+    @Value("${MEMBER_EMAIL:member@example.com}")
+    private String memberEmail;
+
+    @Value("${MEMBER_PASSWORD:aaAA1234}")
+    private String memberPassword;
+
+    @Value("${MEMBER_FULLNAME:Regular Member}")
+    private String memberFullname;
 
     @Override
     @Transactional
@@ -79,9 +107,9 @@ public class DataInitializer implements ApplicationRunner {
     private void seedUsers() {
         log.info("Seeding users...");
 
-        createUser("admin@example.com", "System Admin", "aaAA1234", RoleEnum.ADMIN);
-        createUser("librarian@example.com", "System Librarian", "aaAA1234", RoleEnum.LIBRARIAN);
-        createUser("member@example.com", "Regular Member", "aaAA1234", RoleEnum.MEMBER);
+        createUser(adminEmail, adminFullname, adminPassword, RoleEnum.ADMIN);
+        createUser(librarianEmail, librarianFullname, librarianPassword, RoleEnum.LIBRARIAN);
+        createUser(memberEmail, memberFullname, memberPassword, RoleEnum.MEMBER);
     }
 
     private void seedBooks() {
