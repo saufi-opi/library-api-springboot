@@ -91,7 +91,6 @@ Three users are seeded on first startup (configure in `.env`):
 - **[API.md](API.md)** - Complete API reference with examples
 - **[Deploy.md](Deploy.md)** - Production deployment guide
 - **[Assumptions.md](Assumptions.md)** - Design decisions and assumptions
-- **[CLAUDE.md](CLAUDE.md)** - Developer guide for working with this codebase
 
 ## Project Structure
 
